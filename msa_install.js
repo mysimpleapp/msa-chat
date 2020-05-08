@@ -1,0 +1,25 @@
+module.exports = async itf => {
+	// create table in DB
+	const { withDb } = Msa.require('db')
+	await withDb(async db => {
+		await db.run(
+			`CREATE TABLE IF NOT EXISTS msa_chats (
+				id VARCHAR(255) PRIMARY KEY,
+				params TEXT
+			)`)
+		await db.run(
+			`CREATE TABLE IF NOT EXISTS msa_chat_messages (
+				id VARCHAR(255),
+				num INTEGER,
+				parent INTEGER,
+				content TEXT,
+				createdById VARCHAR(255),
+				createdBy VARCHAR(255),
+				updatedBy VARCHAR(255),
+				createdAt DATETIME,
+				updatedAt DATETIME,
+				PRIMARY KEY (id, num)
+			)`)
+	})
+}
+

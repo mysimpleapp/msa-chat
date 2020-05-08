@@ -1,0 +1,25 @@
+{
+  "name": "@mysimpleapp/msa-chat",
+  "version": "0.1.0",
+  "description": "MySimpleApp module allowing users to chat.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mysimpleapp/msa-chat.git"
+  },
+  "author": "Nicolas CARREZ",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mysimpleapp/msa-chat/issues"
+  },
+  "homepage": "https://github.com/mysimpleapp/msa-chat#readme",
+  "msaKey": "chat",
+  "msaDependencies": {
+    "db": "@mysimpleapp/msa-db",
+    "user": "@mysimpleapp/msa-user",
+    "utils": "@mysimpleapp/msa-utils"
+  }
+}
