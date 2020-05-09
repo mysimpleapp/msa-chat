@@ -86,7 +86,6 @@ importHtml(`<style>
 </style>`)
 
 const template = `
-	<h1>Chat</h1>
 	<div class="admin row" style="display:none">
 		<input type="image" class="config" src="/utils/img/config">
 	</div>
@@ -173,25 +172,6 @@ export class HTMLMsaChatElement extends HTMLElement {
 		this.canCreateMessage = canCreateMessage
 		//showEl(this.Q(".new_idea"), canCreateMessage)
 	}
-	/*
-		initIntro() {
-			const sheet = document.createElement("msa-sheet")
-			sheet.setAttribute("base-url", `${this.baseUrl}/_sheet/${this.ideasId}`)
-			sheet.setAttribute("sheet-id", `intro`)
-			sheet.setAttribute("fetch", "true")
-			sheet.style.minHeight = "5em"
-			sheet.style.border = "1px dashed grey"
-			this.Q(".intro").appendChild(sheet)
-		}
-		*/
-	/*
-		initVotes(votes) {
-			// store votes by id
-			this.votes = votes.reduce((obj, vote) => {
-				if (vote) obj[vote.id] = vote; return obj
-			}, {})
-		}
-	*/
 
 	addMessages(newMsgs) {
 		const msgsEl = this.querySelector(".messages")
@@ -207,20 +187,6 @@ export class HTMLMsaChatElement extends HTMLElement {
 				msgsEl.insertBefore(el, msgs[ite + 1].el)
 		}
 	}
-
-	// return true if idea1 is "greater" then idea2
-	/*
-	compareChat(idea1, idea2) {
-		const vote1 = idea1.vote, vote2 = idea2.vote
-		if (!vote1) return false
-		if (vote1 && !vote2) return true
-		const nb1 = vote1.nb, nb2 = vote2.nb
-		if (!nb1) return false
-		if (nb1 > 0 && !nb2) return true
-		const score1 = vote1.sum / nb1, score2 = vote2.sum / nb2
-		return score1 > score2
-	}
-	*/
 
 	syncMessages() {
 		const msgsEl = this.querySelector(".messages"),

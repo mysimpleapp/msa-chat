@@ -209,70 +209,6 @@ class MsaChatModule extends Msa.Module {
 		}
 	}
 
-	// sheet
-	/*
-		initSheet() {
-	
-			this.sheet = new class extends MsaSheet {
-				getId(ctx, reqId) {
-					return `${ctx.chatSheetArgs.dbIdPrefix}-${reqId}`
-				}
-				checkPerm(req, voteSet, expVal) {
-					let prevVal
-					const perm = req.chatSheetArgs.perm
-					if (perm) prevVal = toSheetPermVal(perm.solve(req.session.user))
-					return super.checkPerm(req, voteSet, expVal, prevVal)
-				}
-			}
-	
-			this.app.use("/_sheet/:id", (req, res, next) => {
-				withDb(async db => {
-					const ctx = newCtx(req, { db })
-					const id = this.getId(ctx, req.params.id)
-					const ideaSet = await this.getIdeaSet(ctx, id)
-					req.chatSheetArgs = {
-						dbIdPrefix: id,
-						perm: ideaSet.params.perm.get()
-					}
-					next()
-				}).catch(next)
-			}, this.sheet.app)
-		}
-	
-	
-		// vote
-	
-		initVote() {
-			this.vote = new class extends MsaVoteModule {
-				getId(ctx, reqId) {
-					return `${ctx.chatVotesArgs.dbIdPrefix}-${reqId}`
-				}
-				checkPerm(req, voteSet, expVal, prevVal) {
-					const perm = req.chatVotesArgs.perm
-					if (perm) prevVal = perm.solve(req.session.user, prevVal)
-					return super.checkPerm(req, voteSet, expVal, prevVal)
-				}
-			}
-	
-			this.app.use("/_vote/:id", (req, res, next) => {
-				withDb(async db => {
-					const ctx = newCtx(req, { db })
-					const id = this.getId(ctx, req.params.id)
-					const ideaSet = await this.getIdeaSet(ctx, id)
-					this.setReqVoteArgs(req, ideaSet)
-					next()
-				}).catch(next)
-			}, this.vote.app)
-		}
-	
-		setReqVoteArgs(req, ideaSet) {
-			req.chatVotesArgs = {
-				dbIdPrefix: ideaSet.id,
-				perm: ideaSet.params.votesPerm.get()
-			}
-		}
-	*/
-
 	// params
 
 	initParams() {
@@ -308,22 +244,12 @@ class MsaChatModule extends Msa.Module {
 }
 
 
-// perm
-/*
-function toSheetPermVal(permVal) {
-	switch (permVal) {
-		case 3: return 2;
-		case 2: return 1;
-		default: return permVal;
-	}
-}
-*/
 // sheet box
 
 class MsaChatSheetBoxModule extends MsaChatModule {
 	getId(ctx, reqId) {
-		const chatId = ctx.chatParamsArgs.id
-		return `chat-${chatId}-${reqId}`
+		const sheetId = ctx.msaSheetArgs.id
+		return `chat-${sheetId}-${reqId}`
 	}
 }
 
@@ -331,7 +257,7 @@ const { registerSheetBoxTemplate } = Msa.require("sheet")
 
 registerSheetBoxTemplate("msa-chat", {
 	title: "Chat",
-	//editionSrc: "/chat/msa-chat-sheet-box.js",
+	editionSrc: "/chat/msa-chat-sheet-box.js",
 	mods: { "/chat": new MsaChatSheetBoxModule() }
 })
 
