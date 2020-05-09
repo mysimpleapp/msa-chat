@@ -8,7 +8,7 @@ export function createSheetBox(sheet) {
     return {
         wel: "/chat/msa-chat.js",
         attrs: {
-            "base-url": `${baseUrl}/${sheetId}/box/chat`,
+            "base-url": `${baseUrl}/${sheetId}/_box/chat`,
             "chat-id": id
         }
     }

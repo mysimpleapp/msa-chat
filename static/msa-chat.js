@@ -1,7 +1,5 @@
 import { importHtml, importOnCall, Q, ajax } from "/utils/msa-utils.js"
 import { prettyFormatDate } from "/utils/msa-utils-date.js"
-// import "/sheet/msa-sheet.js"
-// import "/vote/msa-vote.js"
 
 let User
 import("/user/msa-user-utils.js").then(async mod => {
@@ -50,7 +48,6 @@ importHtml(`<style>
 
 	msa-chat .messages {
 		padding: .5em;
-		/* align-items: stretch; */
 	}
 
 	msa-chat .message {
@@ -114,14 +111,6 @@ const msgTemplate = `
 			<div class="content fill" style="min-height:1em"></div>
 		</div>
 	</div>`
-
-/*
-const ideaEditorTemplate = `
-	<div style="display:flex; flex-direction:column; min-width:20em; min-height:10em">
-		<div class="editor"></div>
-		<div class="content" style="flex: 1; outline: 1px dashed grey"></div>
-	</div>`
-*/
 
 export class HTMLMsaChatElement extends HTMLElement {
 
@@ -244,6 +233,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 		this.syncMessage(msgEl)
 		return msgEl
 	}
+
 	/*
 		makeMessageEditable(msgEl) {
 			const idea = ideaEl.idea
@@ -252,6 +242,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 			this.syncIdea(ideaEl)
 		}
 	*/
+
 	syncMessage(msgEl) {
 		const msg = msgEl.message
 		msgEl.querySelector(".content").innerHTML = msg.content || ""
@@ -272,6 +263,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 		showEl(msgEl.querySelector("input.save"), msg.editing)
 		showEl(msgEl.querySelector("input.cancel"), msg.editing)
 	}
+
 	/*
 		showNewIdea(val) {
 			const newIdeaInput = this.Q(".new_idea input")
@@ -307,6 +299,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 		}
 	}
 	*/
+
 	async postMessage(msg) {
 		let path = `${this.baseUrl}/_message/${this.chatId}`
 		if (msg.num !== undefined)
