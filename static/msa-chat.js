@@ -143,7 +143,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 	}
 
 	getChat() {
-		ajax("GET", `${this.baseUrl}/_list/${this.chatId}`,
+		ajax("GET", `${this.baseUrl}/${this.chatId}/_list`,
 			{ loadingDom: this.Q(".load_chat") })
 			.then(({ messages, canAdmin, canCreateMessage }) => {
 				this.initAdmin(canAdmin)
@@ -224,7 +224,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 			msgEl.querySelector("input.rm").onclick = () => {
 				addConfirmPopup(this, "Are you sur to remove this message ?")
 					.then(() => {
-						ajax("DELETE", `${this.baseUrl}/_message/${this.chatId}/${msg.num}`)
+						ajax("DELETE", `${this.baseUrl}/${this.chatId}/_message/${msg.num}`)
 							.then(() => msgEl.remove())
 					})
 			}
@@ -301,7 +301,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 	*/
 
 	async postMessage(msg) {
-		let path = `${this.baseUrl}/_message/${this.chatId}`
+		let path = `${this.baseUrl}/${this.chatId}/_message`
 		if (msg.num !== undefined)
 			path += `/${msg.num}`
 		const body = { parent: msg.parent, content: msg.content }

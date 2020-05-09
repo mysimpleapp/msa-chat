@@ -76,7 +76,7 @@ class MsaChatModule extends Msa.Module {
 		})
 
 		// list chat
-		app.get("/_list/:id", userMdw, (req, res, next) => {
+		app.get("/:id/_list", userMdw, (req, res, next) => {
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
 				const id = this.getId(ctx, req.params.id)
@@ -98,7 +98,7 @@ class MsaChatModule extends Msa.Module {
 		})
 
 		// post new idea
-		app.post("/_message/:id", userMdw, async (req, res, next) => {
+		app.post("/:id/_message", userMdw, async (req, res, next) => {
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
 				const id = this.getId(ctx, req.params.id)
@@ -110,7 +110,7 @@ class MsaChatModule extends Msa.Module {
 		})
 
 		// post existing idea
-		app.post("/_message/:id/:num", userMdw, async (req, res, next) => {
+		app.post("/:id/_message/:num", userMdw, async (req, res, next) => {
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
 				const id = this.getId(ctx, req.params.id),
@@ -123,7 +123,7 @@ class MsaChatModule extends Msa.Module {
 		})
 
 		// delete idea
-		app.delete("/_message/:id/:num", userMdw, async (req, res, next) => {
+		app.delete("/:id/_message/:num", userMdw, async (req, res, next) => {
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
 				const id = this.getId(ctx, req.params.id),
