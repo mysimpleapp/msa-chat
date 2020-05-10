@@ -272,6 +272,9 @@ function newCtx(req, kwargs) {
 
 // export
 module.exports = {
+	installMsaModule: async itf => {
+		await require("./install")(itf)
+	},
 	startMsaModule: () => {
 		addChatGlobalParams()
 		return new MsaChatModule()
