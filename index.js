@@ -270,5 +270,7 @@ function newCtx(req, kwargs) {
 }
 
 // export
-const exp = module.exports = new MsaChatModule()
-exp.MsaChatModule = MsaChatModule
+module.exports = {
+	startMsaModule: () => new MsaChatModule(),
+	MsaChatModule
+}
