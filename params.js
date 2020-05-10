@@ -8,6 +8,8 @@ class ChatParamDict extends ParamDict {
     }
 }
 
-addGlobalParam("chat", ChatParamDict)
+function addChatGlobalParams() {
+    addGlobalParam("chat", ChatParamDict)
+}
 
-module.exports = { ChatParamDict }
+module.exports = { ChatParamDict, addChatGlobalParams }

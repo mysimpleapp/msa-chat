@@ -3,6 +3,7 @@ const { Chat, ChatTopic, ChatMessage } = require('./model')
 const userMdw = Msa.require("user/mdw")
 
 const { ChatPerm } = require("./perm")
+const { addChatGlobalParams } = require("./params")
 const { MsaParamsLocalAdminModule } = Msa.require("params")
 
 class MsaChatModule extends Msa.Module {
@@ -271,6 +272,9 @@ function newCtx(req, kwargs) {
 
 // export
 module.exports = {
-	startMsaModule: () => new MsaChatModule(),
+	startMsaModule: () => {
+		addChatGlobalParams()
+		return new MsaChatModule()
+	},
 	MsaChatModule
 }
