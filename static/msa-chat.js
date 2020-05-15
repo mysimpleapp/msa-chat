@@ -1,4 +1,4 @@
-import { importHtml, importOnCall, Q, ajax } from "/utils/msa-utils.js"
+import { importHtml, importOnCall, importObj, importMsaBox, Q, ajax } from "/utils/msa-utils.js"
 import { prettyFormatDate } from "/utils/msa-utils-date.js"
 
 let User
@@ -10,6 +10,7 @@ const popupSrc = "/utils/msa-utils-popup.js"
 const addPopup = importOnCall(popupSrc, "addPopup")
 const addConfirmPopup = importOnCall(popupSrc, "addConfirmPopup")
 const addInputPopup = importOnCall(popupSrc, "addInputPopup")
+const importAsPopup = importOnCall(popupSrc, "importAsPopup")
 const textEditorSrc = "/utils/msa-utils-text-editor.js"
 const makeTextEditable = importOnCall(textEditorSrc, "makeTextEditable")
 
@@ -89,7 +90,10 @@ const template = `
 	<div class="chat col">
 		<div class="messages col"></div>
 		<div class="load_chat" style="text-align:center"><msa-loader></msa-loader></div>
-		<div><input class="new_message" style="width:100%" placeholder="Type message here..."></div>
+		<div class="row">
+			<input class="add_message fill" placeholder="Type message here...">
+			<button class="add_box">Add box</button>
+		</div>
 	</p>`
 
 const msgTemplate = `
@@ -132,11 +136,23 @@ export class HTMLMsaChatElement extends HTMLElement {
 		this.Q(".config").onclick = () => this.popupConfig()
 		//if (this.canEdit) {
 		if (true) {
-			const input = this.querySelector(".new_message")
-			input.onkeydown = evt => {
+			const addMsgEl = this.querySelector(".add_message")
+			addMsgEl.onkeydown = evt => {
 				if (evt.keyCode === 13) { // ENTER
-					this.postMessage({ content: input.value })
-					input.value = ""
+					this.postMessage({ content: addMsgEl.value })
+					addMsgEl.value = ""
+				}
+			}
+
+			const addBoxEl = this.querySelector(".add_box")
+			addBoxEl.onclick = async () => {
+				await import("/utils/msa-utils-boxes-menu.js")
+				const popup = await addPopup(this, document.createElement("msa-utils-boxes-menu"))
+				popup.content.onSelect = async boxInfo => {
+					popup.remove()
+					const createFun = await importObj(boxInfo.createFun)
+					const box = await createFun(this)
+					this.postMessage({ content: box.outerHTML })
 				}
 			}
 		}
@@ -194,7 +210,8 @@ export class HTMLMsaChatElement extends HTMLElement {
 	}
 
 	createMessage(msg) {
-		const msgEl = toEl(this.getMessageTemplate())
+		msg = msg || {}
+		const msgEl = toEls(this.getMessageTemplate())[0]
 		msgEl.message = msg
 		// actions
 		//msgEl.querySelector("input.suggest").onclick = () => this.showNewSuggestion(msgEl, true)
@@ -243,9 +260,12 @@ export class HTMLMsaChatElement extends HTMLElement {
 		}
 	*/
 
-	syncMessage(msgEl) {
+	async syncMessage(msgEl) {
 		const msg = msgEl.message
-		msgEl.querySelector(".content").innerHTML = msg.content || ""
+		// msgEl.querySelector(".content").innerHTML = msg.content || ""
+		const cntEl = msgEl.querySelector(".content")
+		const cntEls = toEls(msg.content || "")
+		await importMsaBox(cntEl, cntEls, { boxesRoute: `${this.baseUrl}/${this.chatId}/_box` })
 		if (msg.createdBy) {
 			msgEl.querySelector(".meta .createdBy").textContent = `${msg.createdBy}:`
 			msgEl.querySelector(".meta .createdAt").textContent = prettyFormatDate(new Date(msg.createdAt))
@@ -324,10 +344,10 @@ customElements.define("msa-chat", HTMLMsaChatElement)
 
 // utils
 
-function toEl(html) {
+function toEls(html) {
 	const t = document.createElement("template")
-	t.innerHTML = html
-	return t.content.children[0]
+	t.innerHTML = html.trim()
+	return t.content.childNodes
 }
 
 function initArr(obj, key) {

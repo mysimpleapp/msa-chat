@@ -1,3 +1,4 @@
+const { formatHtml, useMsaBoxesRouter } = Msa.require('utils')
 const { withDb } = Msa.require('db')
 const { Chat, ChatTopic, ChatMessage } = require('./model')
 const userMdw = Msa.require("user/mdw")
@@ -62,6 +63,7 @@ class MsaChatModule extends Msa.Module {
 
 	initApp() {
 		const app = this.app
+
 		// get page
 		app.get("/:id", (req, res, next) => {
 			const id = req.params.id
@@ -136,6 +138,9 @@ class MsaChatModule extends Msa.Module {
 				res.sendStatus(Msa.OK)
 			}).catch(next)
 		})
+
+		// MSA boxes
+		useMsaBoxesRouter(app, '/:id/_box', req => ({ parentId: this.getId(req, req.params.id) }))
 	}
 
 	async getChat(ctx, id) {
@@ -168,7 +173,7 @@ class MsaChatModule extends Msa.Module {
 		const res = await ctx.db.getOne("SELECT MAX(num) AS max_num FROM msa_chat_messages WHERE id=:id", { id })
 		const num = (res && typeof res.max_num === "number") ? (res.max_num + 1) : 0
 		const msg = new ChatMessage(id, num)
-		msg.content = content
+		msg.content = formatHtml(content).body
 		msg.parent = kwargs && kwargs.parent
 		msg.createdById = this.getUserId(ctx)
 		msg.createdBy = msg.updatedBy = this.getUserName(ctx, kwargs && kwargs.by)
@@ -182,7 +187,7 @@ class MsaChatModule extends Msa.Module {
 		const msg = await this.getMessage(ctx, chat, num)
 		// TODO: not found
 		if (!this.canWriteMessage(ctx, chat, msg)) throw Msa.FORBIDDEN
-		msg.content = content
+		msg.content = formatHtml(content).body
 		msg.updatedBy = this.getUserName(ctx, kwargs && kwargs.by)
 		msg.updatedAt = new Date(Date.now())
 		await ctx.db.run("UPDATE msa_chat_messages SET content=:content, updatedBy=:updatedBy, updatedAt=:updatedAt WHERE id=:id AND num=:num",
