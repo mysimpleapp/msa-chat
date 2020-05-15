@@ -1,16 +1,15 @@
 import { importHtml, importOnCall, importObj, importMsaBox, Q, ajax } from "/utils/msa-utils.js"
 import { prettyFormatDate } from "/utils/msa-utils-date.js"
 
-let User
-import("/user/msa-user-utils.js").then(async mod => {
-	User = await mod.getUser()
-})
+async function getUser() {
+	const mod = await import("/user/msa-user-utils.js")
+	return await mod.getUser()
+}
 
 const popupSrc = "/utils/msa-utils-popup.js"
 const addPopup = importOnCall(popupSrc, "addPopup")
 const addConfirmPopup = importOnCall(popupSrc, "addConfirmPopup")
-const addInputPopup = importOnCall(popupSrc, "addInputPopup")
-const importAsPopup = importOnCall(popupSrc, "importAsPopup")
+const addErrorPopup = importOnCall(popupSrc, "addErrorPopup")
 const textEditorSrc = "/utils/msa-utils-text-editor.js"
 const makeTextEditable = importOnCall(textEditorSrc, "makeTextEditable")
 
@@ -45,6 +44,10 @@ importHtml(`<style>
 	}
 	msa-chat .admin input[type=image]:hover {
 		background: lightgrey;
+	}
+
+	msa-chat .user_name {
+		width: 8em;
 	}
 
 	msa-chat .messages {
@@ -91,6 +94,7 @@ const template = `
 		<div class="messages col"></div>
 		<div class="load_chat" style="text-align:center"><msa-loader></msa-loader></div>
 		<div class="row">
+			<input class="user_name" placeholder="Your name">
 			<input class="add_message fill" placeholder="Type message here...">
 			<button class="add_box">Add box</button>
 		</div>
@@ -98,21 +102,21 @@ const template = `
 
 const msgTemplate = `
 	<div class="message row">
-		<div class="fill col">
-			<div class="row">
-				<div class="meta fill">
+		<div class="row fill">
+			<div class="col fill">
+				<div class="meta">
 					<span class="createdBy meta1"></span> <span class="createdAt meta2"></span>
 					<span class="updatedBy meta2"></span> <span class="updatedAt meta2"></span>
 				</div>
-				<div class="btns">
-					<input type="image" class="edit" src="/utils/img/edit">
-					<input type="image" class="rm" src="/utils/img/remove">
-					<input type="image" class="suggest" src="/utils/img/add">
-					<input type="image" class="save editing" src="/utils/img/save">
-					<input type="image" class="cancel editing" src="/utils/img/cancel">
-				</div>
+				<div class="content" style="min-height:1em"></div>
 			</div>
-			<div class="content fill" style="min-height:1em"></div>
+			<div class="btns row">
+				<input type="image" class="edit" src="/utils/img/edit">
+				<input type="image" class="rm" src="/utils/img/remove">
+				<input type="image" class="suggest" src="/utils/img/add">
+				<input type="image" class="save editing" src="/utils/img/save">
+				<input type="image" class="cancel editing" src="/utils/img/cancel">
+			</div>
 		</div>
 	</div>`
 
@@ -123,7 +127,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 		this.Q = Q
 		this.baseUrl = this.getAttribute("base-url")
 		this.chatId = this.getAttribute("chat-id")
-		this.innerHTML = this.getTemplate()
+		this.initContent()
 		this.initActions()
 		//this.initIntro()
 		this.getChat()
@@ -132,15 +136,22 @@ export class HTMLMsaChatElement extends HTMLElement {
 	getTemplate() { return template }
 	getMessageTemplate() { return msgTemplate }
 
+	async initContent() {
+		this.innerHTML = this.getTemplate()
+		const user = await getUser()
+		console.log(user)
+		showEl(this.querySelector(".user_name"), !user)
+	}
+
 	initActions() {
 		this.Q(".config").onclick = () => this.popupConfig()
 		//if (this.canEdit) {
 		if (true) {
 			const addMsgEl = this.querySelector(".add_message")
-			addMsgEl.onkeydown = evt => {
+			addMsgEl.onkeydown = async evt => {
 				if (evt.keyCode === 13) { // ENTER
-					this.postMessage({ content: addMsgEl.value })
-					addMsgEl.value = ""
+					if (await this.postMessage({ content: addMsgEl.value }))
+						addMsgEl.value = ""
 				}
 			}
 
@@ -181,35 +192,22 @@ export class HTMLMsaChatElement extends HTMLElement {
 	addMessages(newMsgs) {
 		const msgsEl = this.querySelector(".messages")
 		const msgs = this.messages
+		let prevMsg
 		for (let msg of newMsgs) {
 			const ite = uniqueOrderedInsert(msgs, msg, (a, b) => b.num - a.num)
-			if (ite < 0) continue
-			const el = this.createMessage(msg)
-			msg.el = el
-			if (ite === msgs.length - 1)
-				msgsEl.appendChild(el)
-			else
-				msgsEl.insertBefore(el, msgs[ite + 1].el)
+			if (ite >= 0) {
+				const el = this.createMessage(msg, prevMsg)
+				msg.el = el
+				if (ite === msgs.length - 1)
+					msgsEl.appendChild(el)
+				else
+					msgsEl.insertBefore(el, msgs[ite + 1].el)
+			}
+			prevMsg = msg
 		}
 	}
 
-	syncMessages() {
-		const msgsEl = this.querySelector(".messages"),
-			msgsEls = msgsEl.children,
-			nbMsgs = msgsEls.length
-		let curMsgIte = 0
-		for (let msg of this.messages) {
-			if (msg.el) continue
-			while (curMsgIte < nbMsgs && (msgsEls[curMsgIte].message.num < msg.num))
-				curMsgIte += 1
-			const el = this.createMessage(msg)
-			msg.el = el
-			if (curMsgIte < nbMsgs) msgsEl.insertBefore(el, msgsEls[curMsgIte])
-			else msgsEl.appendChild(el)
-		}
-	}
-
-	createMessage(msg) {
+	createMessage(msg, prevMsg) {
 		msg = msg || {}
 		const msgEl = toEls(this.getMessageTemplate())[0]
 		msgEl.message = msg
@@ -247,7 +245,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 			}
 		}
 		// sync
-		this.syncMessage(msgEl)
+		this.syncMessage(msgEl, prevMsg)
 		return msgEl
 	}
 
@@ -260,15 +258,19 @@ export class HTMLMsaChatElement extends HTMLElement {
 		}
 	*/
 
-	async syncMessage(msgEl) {
+	async syncMessage(msgEl, prevMsg) {
 		const msg = msgEl.message
 		// msgEl.querySelector(".content").innerHTML = msg.content || ""
 		const cntEl = msgEl.querySelector(".content")
 		const cntEls = toEls(msg.content || "")
 		await importMsaBox(cntEl, cntEls, { boxesRoute: `${this.baseUrl}/${this.chatId}/_box` })
 		if (msg.createdBy) {
-			msgEl.querySelector(".meta .createdBy").textContent = `${msg.createdBy}:`
-			msgEl.querySelector(".meta .createdAt").textContent = prettyFormatDate(new Date(msg.createdAt))
+			if (msg.createdBy != (prevMsg && prevMsg.createdBy))
+				msgEl.querySelector(".meta .createdBy").textContent = `${msg.createdBy}:`
+			const prettyCreatedAt = prettyFormatDate(new Date(msg.createdAt))
+			const prettyPrevCreatedAt = prevMsg && prettyFormatDate(new Date(prevMsg.createdAt))
+			if (prettyCreatedAt != prettyPrevCreatedAt)
+				msgEl.querySelector(".meta .createdAt").textContent = prettyFormatDate(new Date(msg.createdAt))
 			if (msg.createdAt !== msg.updatedAt) {
 				let updatedTxt = "Updated"
 				if (msg.createdBy !== msg.updatedBy)
@@ -325,11 +327,17 @@ export class HTMLMsaChatElement extends HTMLElement {
 		if (msg.num !== undefined)
 			path += `/${msg.num}`
 		const body = { parent: msg.parent, content: msg.content }
-		if (!User) {
-			body["by"] = await addInputPopup(this, "You are not signed. Please provide a name")
+		if (!await getUser()) {
+			const by = this.querySelector(".user_name").value
+			if (!by) {
+				addErrorPopup(this, "You must provide an user name")
+				return false
+			}
+			body["by"] = by
 		}
 		await ajax("POST", path, { body })
 		this.getChat()
+		return true
 	}
 
 	popupConfig() {
