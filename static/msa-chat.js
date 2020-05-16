@@ -1,4 +1,4 @@
-import { importHtml, importOnCall, importObj, importMsaBox, Q, ajax } from "/utils/msa-utils.js"
+import { importHtml, importOnCall, importObj, initMsaBox, Q, ajax } from "/utils/msa-utils.js"
 import { prettyFormatDate } from "/utils/msa-utils-date.js"
 
 async function getUser() {
@@ -139,7 +139,6 @@ export class HTMLMsaChatElement extends HTMLElement {
 	async initContent() {
 		this.innerHTML = this.getTemplate()
 		const user = await getUser()
-		console.log(user)
 		showEl(this.querySelector(".user_name"), !user)
 	}
 
@@ -161,7 +160,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 				const popup = await addPopup(this, document.createElement("msa-utils-boxes-menu"))
 				popup.content.onSelect = async boxInfo => {
 					popup.remove()
-					const createFun = await importObj(boxInfo.createFun)
+					const createFun = await importObj(boxInfo.create)
 					const box = await createFun(this)
 					this.postMessage({ content: box.outerHTML })
 				}
@@ -263,7 +262,8 @@ export class HTMLMsaChatElement extends HTMLElement {
 		// msgEl.querySelector(".content").innerHTML = msg.content || ""
 		const cntEl = msgEl.querySelector(".content")
 		const cntEls = toEls(msg.content || "")
-		await importMsaBox(cntEl, cntEls, { boxesRoute: `${this.baseUrl}/${this.chatId}/_box` })
+		await initMsaBox(cntEls, { boxesRoute: `${this.baseUrl}/${this.chatId}/_box` })
+		for (let i = 0, len = cntEls.length; i < len; ++i) cntEl.appendChild(cntEls[i])
 		if (msg.createdBy) {
 			if (msg.createdBy != (prevMsg && prevMsg.createdBy))
 				msgEl.querySelector(".meta .createdBy").textContent = `${msg.createdBy}:`
