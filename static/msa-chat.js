@@ -1,4 +1,4 @@
-import { importHtml, importOnCall, importObj, initMsaBox, Q, ajax } from "/utils/msa-utils.js"
+import { importHtml, importOnCall, importRef, initMsaBox, Q, ajax } from "/utils/msa-utils.js"
 import { prettyFormatDate } from "/utils/msa-utils-date.js"
 
 async function getUser() {
@@ -160,7 +160,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 				const popup = await addPopup(this, document.createElement("msa-utils-boxes-menu"))
 				popup.content.onSelect = async boxInfo => {
 					popup.remove()
-					const createFun = await importObj(boxInfo.create)
+					const createFun = await importRef(boxInfo.createRef)
 					const box = await createFun(this)
 					this.postMessage({ content: box.outerHTML })
 				}
