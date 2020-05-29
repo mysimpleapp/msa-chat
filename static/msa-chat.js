@@ -125,7 +125,6 @@ export class HTMLMsaChatElement extends HTMLElement {
 	connectedCallback() {
 		this.messages = []
 		this.Q = Q
-		this.baseUrl = this.getAttribute("base-url")
 		this.chatId = this.getAttribute("chat-id")
 		this.initContent()
 		this.initActions()
@@ -135,6 +134,12 @@ export class HTMLMsaChatElement extends HTMLElement {
 
 	getTemplate() { return template }
 	getMessageTemplate() { return msgTemplate }
+
+	getBaseRoute() {
+		if (this.hasAttribute("base-url")) // TODO: deprecate
+			return this.getAttribute("base-url")
+		return this.baseRoute
+	}
 
 	async initContent() {
 		this.innerHTML = this.getTemplate()
@@ -168,7 +173,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 	}
 
 	getChat() {
-		ajax("GET", `${this.baseUrl}/${this.chatId}/_list`,
+		ajax("GET", `${this.getBaseRoute()}/${this.chatId}/_list`,
 			{ loadingDom: this.Q(".load_chat") })
 			.then(({ messages, canAdmin, canCreateMessage }) => {
 				this.initAdmin(canAdmin)
@@ -237,7 +242,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 			msgEl.querySelector("input.rm").onclick = () => {
 				addConfirmPopup(this, "Are you sur to remove this message ?")
 					.then(() => {
-						ajax("DELETE", `${this.baseUrl}/${this.chatId}/_message/${msg.num}`)
+						ajax("DELETE", `${this.getBaseRoute()}/${this.chatId}/_message/${msg.num}`)
 							.then(() => msgEl.remove())
 					})
 			}
@@ -261,7 +266,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 		// msgEl.querySelector(".content").innerHTML = msg.content || ""
 		const cntEl = msgEl.querySelector(".content")
 		const cntEls = toEls(msg.content || "")
-		await initMsaBox(cntEls, { boxesRoute: `${this.baseUrl}/${this.chatId}/_box` })
+		await initMsaBox(cntEls, { boxesRoute: `${this.getBaseRoute()}/${this.chatId}/_box` })
 		for (let i = 0, len = cntEls.length; i < len; ++i) cntEl.appendChild(cntEls[i])
 		if (msg.createdBy) {
 			if (msg.createdBy != (prevMsg && prevMsg.createdBy))
@@ -322,7 +327,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 	*/
 
 	async postMessage(msg) {
-		let path = `${this.baseUrl}/${this.chatId}/_message`
+		let path = `${this.getBaseRoute()}/${this.chatId}/_message`
 		if (msg.num !== undefined)
 			path += `/${msg.num}`
 		const body = { parent: msg.parent, content: msg.content }
@@ -342,12 +347,34 @@ export class HTMLMsaChatElement extends HTMLElement {
 	popupConfig() {
 		import("/params/msa-params-admin.js")
 		const paramsEl = document.createElement("msa-params-admin")
-		paramsEl.setAttribute("base-url", `${this.baseUrl}/_params/${this.chatId}`)
+		paramsEl.setAttribute("base-url", `${this.getBaseRoute()}/_params/${this.chatId}`)
 		addPopup(this, paramsEl)
 	}
 }
 
 customElements.define("msa-chat", HTMLMsaChatElement)
+
+// box
+
+export function createMsaChatBox(boxParent) {
+	let id
+	for (id = 1; ; ++id)
+		if (!boxParent.querySelector(`msa-chat[chat-id='${id}']`))
+			break
+	const res = document.createElement("msa-chat")
+	res.setAttribute("chat-id", id)
+	return res
+}
+
+export function initMsaChatBox(_this, ctx) {
+	_this.baseRoute = `${ctx.boxesRoute}/chat`
+}
+
+export function exportMsaChatBox(_this) {
+	const res = document.createElement("msa-chat")
+	res.setAttribute("chat-id", _this.getAttribute("chat-id"))
+	return res
+}
 
 // utils
 

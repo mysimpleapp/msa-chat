@@ -1,6 +1,6 @@
-const { formatHtml, useMsaBoxesRouter } = Msa.require('utils')
+const { formatHtml, useMsaBoxesRouter, registerMsaBox } = Msa.require('utils')
 const { withDb } = Msa.require('db')
-const { Chat, ChatTopic, ChatMessage } = require('./model')
+const { Chat, ChatMessage } = require('./model')
 const userMdw = Msa.require("user/mdw")
 
 const { ChatPerm } = require("./perm")
@@ -265,6 +265,23 @@ registerSheetBoxTemplate("msa-chat", {
 	title: "Chat",
 	editionSrc: "/chat/msa-chat-sheet-box.js",
 	mods: { "/chat": new MsaChatSheetBoxModule() }
+})
+
+// box
+
+class MsaChatBoxModule extends MsaChatModule {
+	getId(req, reqId) {
+		return `${req.msaBoxCtx.parentId}-${reqId}`
+	}
+}
+
+registerMsaBox("msa-chat", {
+	title: "Chat",
+	mods: { "/chat": new MsaChatBoxModule() },
+	head: "/chat/msa-chat.js",
+	createRef: "/chat/msa-chat.js:createMsaChatBox",
+	initRef: "/chat/msa-chat.js:initMsaChatBox",
+	exportRef: "/chat/msa-chat.js:exportMsaChatBox"
 })
 
 // utils
