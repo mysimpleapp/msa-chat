@@ -356,10 +356,10 @@ customElements.define("msa-chat", HTMLMsaChatElement)
 
 // box
 
-export function createMsaChatBox(boxParent) {
+export function createMsaChatBox(ctx) {
 	let id
 	for (id = 1; ; ++id)
-		if (!boxParent.querySelector(`msa-chat[chat-id='${id}']`))
+		if (!ctx.parent.querySelector(`msa-chat[chat-id='${id}']`))
 			break
 	const res = document.createElement("msa-chat")
 	res.setAttribute("chat-id", id)
