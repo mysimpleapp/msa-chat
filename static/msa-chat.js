@@ -1,4 +1,4 @@
-import { importHtml, importOnCall, createMsaBox, initMsaBox, Q, ajax } from "/utils/msa-utils.js"
+import { importHtml, importOnCall, Q, ajax, registerMsaBox, getMsaBoxCtx } from "/utils/msa-utils.js"
 import { prettyFormatDate } from "/utils/msa-utils-date.js"
 
 async function getUser() {
@@ -16,23 +16,24 @@ const makeTextEditable = importOnCall(textEditorSrc, "makeTextEditable")
 
 importHtml(`<style>
 
-	msa-chat {
+	msa-chat, msa-chat-box {
 		padding: 1em;
 	}
 
-	msa-chat .row {
+	msa-chat .row, msa-chat-box .row {
 		display: flex;
 		flex-direction: row;
 	}
-	msa-chat .col {
+	msa-chat .col, msa-chat-box .col {
 		display: flex;
 		flex-direction: column;
 	}
-	msa-chat .fill {
+	msa-chat .fill, msa-chat-box .fill {
 		flex: 1;
 	}
 
-	msa-chat .admin input[type=image] {
+	msa-chat .admin input[type=image],
+	msa-chat-box .admin input[type=image] {
 		background: white;
 		width: 2em;
 		height: 2em;
@@ -42,46 +43,56 @@ importHtml(`<style>
 		border-radius: .5em;
 		box-shadow: 2px 2px 4px #555;
 	}
-	msa-chat .admin input[type=image]:hover {
+	msa-chat .admin input[type=image]:hover,
+	msa-chat-box .admin input[type=image]:hover {
 		background: lightgrey;
 	}
 
-	msa-chat .user_name {
+	msa-chat .user_name, 
+	msa-chat-box .user_name {
 		width: 8em;
 	}
 
-	msa-chat .messages {
+	msa-chat .messages, 
+	msa-chat-box .messages {
 		padding: .5em;
 	}
 
-	msa-chat .message {
+	msa-chat .message,
+	msa-chat-box .message {
 		border-top: 1px dashed lightgrey;
 		padding: .3em;
 	}
 
-	msa-chat .meta1 {
+	msa-chat .meta1,
+	msa-chat-box .meta1 {
 		font-weight: bold;
 	}
 
-	msa-chat .meta2 {
+	msa-chat .meta2,
+	msa-chat-box .meta2, {
 		font-style: italic;
 		color: grey;
 		font-size: .8em;
 	}
 
-	msa-chat .message .content {
+	msa-chat .message .content,
+	msa-chat-box .message .content {
 		margin: .4em;
 	}
 
-	msa-chat .message .btns {
+	msa-chat .message .btns,
+	msa-chat-box .message .btns {
 		display: flex;
 	}
-	msa-chat .message .btns input[type=image] {
+	msa-chat .message .btns input[type=image],
+	msa-chat-box .message .btns input[type=image] {
 		width: 1.2em;
 		height: 1.2em;
 		padding: .3em;
 	}
-	msa-chat .message .btns input[type=image]:hover {
+	msa-chat .message .btns input[type=image]:hover,
+	msa-chat-box .message .btns input[type=image]:hover {
 		box-shadow: 2px 2px 4px #555;
 	}
 </style>`)
@@ -125,21 +136,21 @@ export class HTMLMsaChatElement extends HTMLElement {
 	connectedCallback() {
 		this.messages = []
 		this.Q = Q
-		this.chatId = this.getAttribute("chat-id")
 		this.initContent()
 		this.initActions()
 		//this.initIntro()
 		this.getChat()
 	}
 
+	getChatId() {
+		return this.getAttribute("chat-id")
+	}
+	getBaseRoute() {
+		return this.getAttribute("base-route")
+	}
+
 	getTemplate() { return template }
 	getMessageTemplate() { return msgTemplate }
-
-	getBaseRoute() {
-		if (this.hasAttribute("base-url")) // TODO: deprecate
-			return this.getAttribute("base-url")
-		return this.baseRoute
-	}
 
 	async initContent() {
 		this.innerHTML = this.getTemplate()
@@ -173,7 +184,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 	}
 
 	getChat() {
-		ajax("GET", `${this.getBaseRoute()}/${this.chatId}/_list`,
+		ajax("GET", `${this.getBaseRoute()}/${this.getChatId()}/_list`,
 			{ loadingDom: this.Q(".load_chat") })
 			.then(({ messages, canAdmin, canCreateMessage }) => {
 				this.initAdmin(canAdmin)
@@ -242,7 +253,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 			msgEl.querySelector("input.rm").onclick = () => {
 				addConfirmPopup(this, "Are you sur to remove this message ?")
 					.then(() => {
-						ajax("DELETE", `${this.getBaseRoute()}/${this.chatId}/_message/${msg.num}`)
+						ajax("DELETE", `${this.getBaseRoute()}/${this.getChatId()}/_message/${msg.num}`)
 							.then(() => msgEl.remove())
 					})
 			}
@@ -266,7 +277,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 		// msgEl.querySelector(".content").innerHTML = msg.content || ""
 		const cntEl = msgEl.querySelector(".content")
 		const cntEls = toEls(msg.content || "")
-		await initMsaBox(cntEls, { boxesRoute: `${this.getBaseRoute()}/${this.chatId}/_box` })
+		//await initMsaBox(cntEls, { boxesRoute: `${this.getBaseRoute()}/${this.getChatId()}/_box` })
 		for (let i = 0, len = cntEls.length; i < len; ++i) cntEl.appendChild(cntEls[i])
 		if (msg.createdBy) {
 			if (msg.createdBy != (prevMsg && prevMsg.createdBy))
@@ -327,7 +338,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 	*/
 
 	async postMessage(msg) {
-		let path = `${this.getBaseRoute()}/${this.chatId}/_message`
+		let path = `${this.getBaseRoute()}/${this.getChatId()}/_message`
 		if (msg.num !== undefined)
 			path += `/${msg.num}`
 		const body = { parent: msg.parent, content: msg.content }
@@ -347,7 +358,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 	popupConfig() {
 		import("/params/msa-params-admin.js")
 		const paramsEl = document.createElement("msa-params-admin")
-		paramsEl.setAttribute("base-url", `${this.getBaseRoute()}/_params/${this.chatId}`)
+		paramsEl.setAttribute("base-url", `${this.getBaseRoute()}/_params/${this.getChatId()}`)
 		addPopup(this, paramsEl)
 	}
 }
@@ -356,6 +367,34 @@ customElements.define("msa-chat", HTMLMsaChatElement)
 
 // box
 
+export class HTMLMsaChatBoxElement extends HTMLMsaChatElement {
+
+	async connectedCallback() {
+		this.msaBoxCtx = await getMsaBoxCtx(this)
+		super.connectedCallback()
+	}
+
+	getBaseRoute() {
+		return `${this.msaBoxCtx.boxesRoute}/chat`
+	}
+}
+
+customElements.define("msa-chat-box", HTMLMsaChatBoxElement)
+
+registerMsaBox("msa-chat-box", {
+	createBox: async function(ctx) {
+		const chat = await ajax("POST", `${ctx.boxesRoute}/chat`)
+		const res = document.createElement("msa-chat-box")
+		res.setAttribute("chat-id", chat.id)
+		return res
+	},
+	exportBox: function(el) {
+		const res = document.createElement("msa-chat-box")
+		res.setAttribute("chat-id", el.getChatId())
+		return res
+	}
+})
+/*
 export function createMsaChatBox(ctx) {
 	let id
 	for (id = 1; ; ++id)
@@ -375,7 +414,7 @@ export function exportMsaChatBox(_this) {
 	res.setAttribute("chat-id", _this.getAttribute("chat-id"))
 	return res
 }
-
+*/
 // utils
 
 function toEls(html) {

@@ -1,5 +1,5 @@
 const { formatHtml, useMsaBoxesRouter, registerMsaBox } = Msa.require('utils')
-const { withDb } = Msa.require('db')
+const { db } = Msa.require("db")
 const { Chat, ChatMessage } = require('./model')
 const userMdw = Msa.require("user/mdw")
 
@@ -15,50 +15,50 @@ class MsaChatModule extends Msa.Module {
 		this.initParams()
 	}
 
-	getId(ctx, reqId) {
+	getId(req, reqId) {
 		return `chat-${reqId}`
 	}
 
-	getUserId(ctx) {
-		const user = ctx.user
-		return user ? user.id : ctx.connection.remoteAddress
+	getUserId(req) {
+		const user = req.user
+		return user ? user.id : req.connection.remoteAddress
 	}
 
-	getUserName(ctx, reqUserName) {
-		const user = ctx.user
+	getUserName(req, reqUserName) {
+		const user = req.user
 		return user ? user.name : reqUserName
 	}
 
-	checkPerm(ctx, chat, permId, expVal, prevVal) {
+	checkPerm(req, chat, permId, expVal, prevVal) {
 		const perm = chat.params[permId].get()
-		return perm.check(ctx.user, expVal, prevVal)
+		return perm.check(req.user, expVal, prevVal)
 	}
 
-	canRead(ctx, chat) {
-		return this.checkPerm(ctx, chat, "perm", ChatPerm.READ)
+	canRead(req, chat) {
+		return this.checkPerm(req, chat, "perm", ChatPerm.READ)
 	}
 
-	canCreateMessage(ctx, chat) {
-		return this.checkPerm(ctx, chat, "perm", ChatPerm.PROPOSE)
+	canCreateMessage(req, chat) {
+		return this.checkPerm(req, chat, "perm", ChatPerm.PROPOSE)
 	}
 
-	canAdmin(ctx, chat) {
-		return this.checkPerm(ctx, chat, "perm", ChatPerm.ADMIN)
+	canAdmin(req, chat) {
+		return this.checkPerm(req, chat, "perm", ChatPerm.ADMIN)
 	}
 
-	canReadMessage(ctx, chat, msg) {
-		return this.checkPerm(ctx, chat, "perm", ChatPerm.READ)
-			|| (msg.createdById == this.getUserId(ctx))
+	canReadMessage(req, chat, msg) {
+		return this.checkPerm(req, chat, "perm", ChatPerm.READ)
+			|| (msg.createdById == this.getUserId(req))
 	}
 
-	canWriteMessage(ctx, chat, msg) {
-		return this.checkPerm(ctx, chat, "perm", ChatPerm.ADMIN)
-			|| (msg.createdById == this.getUserId(ctx))
+	canWriteMessage(req, chat, msg) {
+		return this.checkPerm(req, chat, "perm", ChatPerm.ADMIN)
+			|| (msg.createdById == this.getUserId(req))
 	}
 
-	canRemoveMessage(ctx, chat, msg) {
-		return this.checkPerm(ctx, chat, "perm", ChatPerm.ADMIN)
-			|| (msg.createdById == this.getUserId(ctx))
+	canRemoveMessage(req, chat, msg) {
+		return this.checkPerm(req, chat, "perm", ChatPerm.ADMIN)
+			|| (msg.createdById == this.getUserId(req))
 	}
 
 	initApp() {
@@ -66,25 +66,26 @@ class MsaChatModule extends Msa.Module {
 
 		// get page
 		app.get("/:id", (req, res, next) => {
-			const id = req.params.id
-			if (id.indexOf('-') >= 0 || id[0] === '_')
-				return next()
-			res.sendPage({
-				wel: "/chat/msa-chat.js",
-				attrs: {
-					'base-url': req.baseUrl,
-					'chat-id': id
-				}
-			})
+			try {
+				const id = req.params.id
+				if (id.indexOf('-') >= 0 || id[0] === '_')
+					return next()
+				res.sendPage({
+					wel: "/chat/msa-chat.js",
+					attrs: {
+						'base-url': req.baseUrl,
+						'chat-id': id
+					}
+				})
+			} catch(err) { next(err) }
 		})
 
 		// list chat
-		app.get("/:id/_list", userMdw, (req, res, next) => {
-			withDb(async db => {
-				const ctx = newCtx(req, { db })
-				const id = this.getId(ctx, req.params.id)
-				const chat = await this.getChat(ctx, id)
-				const msgs = await this.getMessages(ctx, chat)
+		app.get("/:id/_list", userMdw, async (req, res, next) => {
+			try {
+				const id = this.getId(req, req.params.id)
+				const chat = await this.getChat(req, id)
+				const msgs = await this.getMessages(req, chat)
 				// vote
 				/*
 				const chatIds = chat.map(idea => `${idea.id}-${idea.num}`)
@@ -93,116 +94,136 @@ class MsaChatModule extends Msa.Module {
 				*/
 				// res
 				res.json({
-					messages: msgs.map(m => this.exportMessage(ctx, chat, m)),
-					canAdmin: this.canAdmin(ctx, chat),
-					canCreateMessage: this.canCreateMessage(ctx, chat)
+					messages: msgs.map(m => this.exportMessage(req, chat, m)),
+					canAdmin: this.canAdmin(req, chat),
+					canCreateMessage: this.canCreateMessage(req, chat)
 				})
-			}).catch(next)
+			} catch(err) { next(err) }
 		})
 
-		// post new idea
+		// post new chat
+		app.post("/", userMdw, async (req, res, next) => {
+			try {
+				const chat = await this.createNewChat(req)
+				res.json({
+					id: chat.id
+				})
+			} catch(err) { next(err) }
+		})
+
+		// post new message
 		app.post("/:id/_message", userMdw, async (req, res, next) => {
-			withDb(async db => {
-				const ctx = newCtx(req, { db })
-				const id = this.getId(ctx, req.params.id)
+			try {
+				const id = this.getId(req, req.params.id)
 				const { content, by } = req.body
-				const chat = await this.getChat(ctx, id)
-				await this.createMessage(ctx, chat, content, { by })
+				const chat = await this.getChat(req, id)
+				await this.createMessage(req, chat, content, { by })
 				res.sendStatus(Msa.OK)
-			}).catch(next)
+			} catch(err) { next(err) }
 		})
 
-		// post existing idea
+		// post existing message
 		app.post("/:id/_message/:num", userMdw, async (req, res, next) => {
-			withDb(async db => {
-				const ctx = newCtx(req, { db })
-				const id = this.getId(ctx, req.params.id),
+			try {
+				const id = this.getId(req, req.params.id),
 					num = req.params.num
 				const { content, by } = req.body
-				const chat = await this.getChat(ctx, id)
-				await this.updateMessage(ctx, chat, num, content, { by })
+				const chat = await this.getChat(req, id)
+				await this.updateMessage(req, chat, num, content, { by })
 				res.sendStatus(Msa.OK)
-			}).catch(next)
+			} catch(err) { next(err) }
 		})
 
 		// delete idea
 		app.delete("/:id/_message/:num", userMdw, async (req, res, next) => {
-			withDb(async db => {
-				const ctx = newCtx(req, { db })
-				const id = this.getId(ctx, req.params.id),
+			try {
+				const id = this.getId(req, req.params.id),
 					num = req.params.num
-				const chat = await this.getChat(ctx, id)
-				const msg = await this.getMessage(ctx, chat, num)
+				const chat = await this.getChat(req, id)
+				const msg = await this.getMessage(req, chat, num)
 				// TODO: not found
-				await this.removeMessage(ctx, chat, msg)
+				await this.removeMessage(req, chat, msg)
 				res.sendStatus(Msa.OK)
-			}).catch(next)
+			} catch(err) { next(err) }
 		})
 
 		// MSA boxes
 		useMsaBoxesRouter(app, '/:id/_box', req => ({ parentId: this.getId(req, req.params.id) }))
 	}
 
-	async getChat(ctx, id) {
-		const dbChat = await ctx.db.getOne("SELECT id, params FROM msa_chats WHERE id=:id", { id })
+	async getChat(req, id) {
+		const dbChat = await db.collection("msa_chats").findOne({ _id:id })
 		const chat = Chat.newFromDb(id, dbChat)
-		if (!this.canRead(ctx, chat)) throw Msa.FORBIDDEN
+		if (!this.canRead(req, chat)) throw Msa.FORBIDDEN
 		return chat
 	}
 
-	async getMessages(ctx, chat) {
-		const dbMsgs = await ctx.db.get("SELECT id, num, parent, content, createdById, createdBy, updatedBy, createdAt, updatedAt FROM msa_chat_messages WHERE id=:id",
-			{ id: chat.id })
+	async getMessages(req, chat) {
+		const dbMsgs = await db.collection("msa_chat_messages").find({ _id:new RegExp('^' + chat.id) }).toArray()
 		const msgs = dbMsgs
-			.map(dbMsg => ChatMessage.newFromDb(dbMsg.id, dbMsg.num, dbMsg))
-			.filter(msg => this.canReadMessage(ctx, chat, msg))
+			.map(dbMsg => ChatMessage.newFromDb(dbMsg.chatId, dbMsg.num, dbMsg))
+			.filter(msg => this.canReadMessage(req, chat, msg))
 		return msgs
 	}
 
-	async getMessage(ctx, chat, num) {
-		const dbMsg = await ctx.db.getOne("SELECT id, num, parent, content, createdById, createdBy, updatedBy, createdAt, updatedAt FROM msa_chat_messages WHERE id=:id AND num=:num",
-			{ id: chat.id, num })
+	async getMessage(req, chat, num) {
+		const dbMsg = await db.collection("msa_chat_messages").findOne({ _id:`${chat.id}-${num}` })
 		const msg = ChatMessage.newFromDb(chat.id, num, dbMsg)
-		if (!this.canRead(ctx, chat, msg)) throw Msa.FORBIDDEN
+		if (!this.canRead(req, chat, msg)) throw Msa.FORBIDDEN
 		return msg
 	}
 
-	async createMessage(ctx, chat, content, kwargs) {
-		if (!this.canCreateMessage(ctx, chat)) throw Msa.FORBIDDEN
-		const id = chat.id
-		const res = await ctx.db.getOne("SELECT MAX(num) AS max_num FROM msa_chat_messages WHERE id=:id", { id })
-		const num = (res && typeof res.max_num === "number") ? (res.max_num + 1) : 0
-		const msg = new ChatMessage(id, num)
+	async createNewChat(req) {
+		const id = this.getId(req, "")
+		const newId = await dbCounterIncr("msa_chats_counter", id)
+		const chat = new Chat(this.getId(req, newId))
+		return chat
+	}
+
+	async createMessage(req, chat, content, kwargs) {
+		if (!this.canCreateMessage(req, chat)) throw Msa.FORBIDDEN
+		const id = this.getId(req, chat.id)
+		const num = await dbCounterIncr("msa_chat_messages_counter", id)
+		const msg = new ChatMessage(chat.id, num)
 		msg.content = formatHtml(content).body
 		msg.parent = kwargs && kwargs.parent
-		msg.createdById = this.getUserId(ctx)
-		msg.createdBy = msg.updatedBy = this.getUserName(ctx, kwargs && kwargs.by)
+		msg.createdById = this.getUserId(req)
+		msg.createdBy = msg.updatedBy = this.getUserName(req, kwargs && kwargs.by)
 		msg.createdAt = msg.updatedAt = new Date(Date.now())
-		await ctx.db.run("INSERT INTO msa_chat_messages (id, num, content, parent, createdById, createdBy, updatedBy, createdAt, updatedAt) VALUES (:id, :num, :content, :parent, :createdById, :createdBy, :updatedBy, :createdAt, :updatedAt)",
-			msg.formatForDb())
+		const vals = msg.formatForDb()
+		await db.collection("msa_chat_messages").updateOne(
+			{ _id: vals._id },
+			{ $set: vals },
+			{ upsert: true }
+		)
 		return msg
 	}
 
-	async updateMessage(ctx, chat, num, content, kwargs) {
-		const msg = await this.getMessage(ctx, chat, num)
+	async updateMessage(req, chat, num, content, kwargs) {
+		const msg = await this.getMessage(req, chat, num)
 		// TODO: not found
-		if (!this.canWriteMessage(ctx, chat, msg)) throw Msa.FORBIDDEN
+		if (!this.canWriteMessage(req, chat, msg)) throw Msa.FORBIDDEN
 		msg.content = formatHtml(content).body
-		msg.updatedBy = this.getUserName(ctx, kwargs && kwargs.by)
+		msg.updatedBy = this.getUserName(req, kwargs && kwargs.by)
 		msg.updatedAt = new Date(Date.now())
-		await ctx.db.run("UPDATE msa_chat_messages SET content=:content, updatedBy=:updatedBy, updatedAt=:updatedAt WHERE id=:id AND num=:num",
-			msg.formatForDb(["id", "num", "content", "updatedBy", "updatedAt"]))
+		const vals = msg.formatForDb()
+		await db.collection("msa_chat_messages").updateOne(
+			{ _id: vals._id },
+			{ $set: vals }
+		)
 	}
 
-	async removeMessage(ctx, chat, msg) {
-		if (!this.canRemoveMessage(ctx, chat, msg)) throw Msa.FORBIDDEN
-		await ctx.db.run("DELETE FROM msa_chat_messages WHERE id=:id AND num=:num",
-			{ id: chat.id, num: msg.num })
+	async removeMessage(req, chat, msg) {
+		if (!this.canRemoveMessage(req, chat, msg)) throw Msa.FORBIDDEN
+		const vals = msg.formatForDb()
+		await db.collection("msa_chat_messages").deleteOne(
+			{ _id: vals._id }
+		)
 	}
 
-	exportMessage(ctx, chat, msg) {
+	exportMessage(req, chat, msg) {
 		return {
-			id: msg.id,
+			id: msg.chatId,
 			num: msg.num,
 			content: msg.content,
 			parent: msg.parent,
@@ -210,8 +231,8 @@ class MsaChatModule extends Msa.Module {
 			updatedBy: msg.updatedBy,
 			createdAt: msg.createdAt ? msg.createdAt.toISOString() : null,
 			updatedAt: msg.updatedAt ? msg.updatedAt.toISOString() : null,
-			canEdit: this.canWriteMessage(ctx, chat, msg),
-			canRemove: this.canRemoveMessage(ctx, chat, msg)
+			canEdit: this.canWriteMessage(req, chat, msg),
+			canRemove: this.canRemoveMessage(req, chat, msg)
 		}
 	}
 
@@ -251,7 +272,7 @@ class MsaChatModule extends Msa.Module {
 
 
 // sheet box
-
+/*
 class MsaChatSheetBoxModule extends MsaChatModule {
 	getId(ctx, reqId) {
 		const sheetId = ctx.msaSheetArgs.id
@@ -266,7 +287,7 @@ registerSheetBoxTemplate("msa-chat", {
 	editionSrc: "/chat/msa-chat-sheet-box.js",
 	mods: { "/chat": new MsaChatSheetBoxModule() }
 })
-
+*/
 // box
 
 class MsaChatBoxModule extends MsaChatModule {
@@ -275,21 +296,27 @@ class MsaChatBoxModule extends MsaChatModule {
 	}
 }
 
-registerMsaBox("msa-chat", {
+registerMsaBox("msa-chat-box", {
 	title: "Chat",
 	mods: { "/chat": new MsaChatBoxModule() },
-	head: "/chat/msa-chat.js",
-	createRef: "/chat/msa-chat.js:createMsaChatBox",
-	initRef: "/chat/msa-chat.js:initMsaChatBox",
-	exportRef: "/chat/msa-chat.js:exportMsaChatBox"
+	head: "/chat/msa-chat.js"
 })
 
 // utils
 
-function newCtx(req, kwargs) {
-	const ctx = Object.create(req)
-	Object.assign(ctx, kwargs)
-	return ctx
+async function dbCounterIncr(name, id) {
+	const res = await db.collection(name).findOneAndUpdate(
+		{ _id: id },
+		{
+			$set: { _id: id },
+			$inc: { value: 1 }
+		},
+		{
+			upsert: true,
+			new: true
+		}
+	)
+	return res.value ? res.value.value : 0
 }
 
 // export

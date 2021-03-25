@@ -11,11 +11,10 @@ exp.Chat = class {
     }
 
     formatForDb() {
-        const res = {}
-        if (!keys || keys.indexOf("id") >= 0)
-            res.id = this.id
-        if (!keys || keys.indexOf("params") >= 0)
-            res.params = this.params.getAsDbStr()
+        const res = {
+            _id: this.id
+        }
+        res.params = this.params.getAsDbStr()
         return res
     }
 
@@ -31,48 +30,35 @@ exp.Chat = class {
 }
 
 
+const MSG_FIELDS = [ "parent", "content", "createdById", "createdBy", "updatedBy", "createdAt", "updatedAt" ]
+
 exp.ChatMessage = class {
 
-    constructor(id, num) {
-        this.id = id
+    constructor(chatId, num) {
+        this.chatId = chatId
         this.num = num
     }
 
-    formatForDb(keys) {
-        const res = {}
-        if (!keys || keys.indexOf("id") >= 0)
-            res.id = this.id
-        if (!keys || keys.indexOf("num") >= 0)
-            res.num = this.num
-        if (!keys || keys.indexOf("parent") >= 0)
-            res.parent = this.parent
-        if (!keys || keys.indexOf("content") >= 0)
-            res.content = this.content
-        if (!keys || keys.indexOf("createdById") >= 0)
-            res.createdById = this.createdById
-        if (!keys || keys.indexOf("createdBy") >= 0)
-            res.createdBy = this.createdBy
-        if (!keys || keys.indexOf("updatedBy") >= 0)
-            res.updatedBy = this.updatedBy
-        if (!keys || keys.indexOf("createdAt") >= 0)
-            res.createdAt = this.createdAt ? this.createdAt.toISOString() : null
-        if (!keys || keys.indexOf("updatedAt") >= 0)
-            res.updatedAt = this.updatedAt ? this.updatedAt.toISOString() : null
+    formatForDb() {
+        const res = {
+            _id: `${this.chatId}-${this.num}`,
+            chatId: this.chatId,
+            num: this.num
+        }
+        MSG_FIELDS.forEach(f => res[f] = this[f])
+        res.createdAt = res.createdAt ? res.createdAt.toISOString() : null
+        res.updatedAt = res.updatedAt ? res.updatedAt.toISOString() : null
         return res
     }
 
     parseFromDb(dbMsg) {
-        this.parent = dbMsg.parent
-        this.content = dbMsg.content
-        this.createdById = dbMsg.createdById
-        this.createdBy = dbMsg.createdBy
-        this.updatedBy = dbMsg.updatedBy
-        this.createdAt = dbMsg.createdAt ? new Date(dbMsg.createdAt) : null
-        this.updatedAt = dbMsg.updatedAt ? new Date(dbMsg.updatedAt) : null
+        MSG_FIELDS.forEach(f => this[f] = dbMsg[f])
+        this.createdAt = this.createdAt ? new Date(this.createdAt) : null
+        this.updatedAt = this.updatedAt ? new Date(this.updatedAt) : null
     }
 
-    static newFromDb(id, num, dbMsg) {
-        const _this = new this(id, num)
+    static newFromDb(chatId, num, dbMsg) {
+        const _this = new this(chatId, num)
         if (dbMsg) _this.parseFromDb(dbMsg)
         return _this
     }
