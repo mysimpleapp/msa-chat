@@ -71,7 +71,7 @@ class MsaChatModule extends Msa.Module {
 				if (id.indexOf('-') >= 0 || id[0] === '_')
 					return next()
 				res.sendPage({
-					wel: "/chat/msa-chat.js",
+					wel: "/msa/chat/msa-chat.js",
 					attrs: {
 						'base-url': req.baseUrl,
 						'chat-id': id
@@ -271,23 +271,6 @@ class MsaChatModule extends Msa.Module {
 }
 
 
-// sheet box
-/*
-class MsaChatSheetBoxModule extends MsaChatModule {
-	getId(ctx, reqId) {
-		const sheetId = ctx.msaSheetArgs.id
-		return `chat-${sheetId}-${reqId}`
-	}
-}
-
-const { registerSheetBoxTemplate } = Msa.require("sheet")
-
-registerSheetBoxTemplate("msa-chat", {
-	title: "Chat",
-	editionSrc: "/chat/msa-chat-sheet-box.js",
-	mods: { "/chat": new MsaChatSheetBoxModule() }
-})
-*/
 // box
 
 class MsaChatBoxModule extends MsaChatModule {
@@ -299,7 +282,7 @@ class MsaChatBoxModule extends MsaChatModule {
 registerMsaBox("msa-chat-box", {
 	title: "Chat",
 	mods: { "/chat": new MsaChatBoxModule() },
-	head: "/chat/msa-chat.js"
+	head: "/msa/chat/msa-chat.js"
 })
 
 // utils

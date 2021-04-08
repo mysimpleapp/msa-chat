@@ -20,7 +20,6 @@
   "msaDependencies": {
     "db": "@mysimpleapp/msa-db",
     "user": "@mysimpleapp/msa-user",
-    "utils": "@mysimpleapp/msa-utils",
-    "sheet": "@mysimpleapp/msa-sheet"
+    "utils": "@mysimpleapp/msa-utils"
   }
 }

@@ -1,16 +1,16 @@
-import { importHtml, importOnCall, Q, ajax, registerMsaBox, getMsaBoxCtx } from "/utils/msa-utils.js"
-import { prettyFormatDate } from "/utils/msa-utils-date.js"
+import { importHtml, importOnCall, Q, ajax, registerMsaBox, getMsaBoxCtx } from "/msa/utils/msa-utils.js"
+import { prettyFormatDate } from "/msa/utils/msa-utils-date.js"
 
 async function getUser() {
-	const mod = await import("/user/msa-user-utils.js")
+	const mod = await import("/msa/user/msa-user-utils.js")
 	return await mod.getUser()
 }
 
-const popupSrc = "/utils/msa-utils-popup.js"
+const popupSrc = "/msa/utils/msa-utils-popup.js"
 const addPopup = importOnCall(popupSrc, "addPopup")
 const addConfirmPopup = importOnCall(popupSrc, "addConfirmPopup")
 const addErrorPopup = importOnCall(popupSrc, "addErrorPopup")
-const textEditorSrc = "/utils/msa-utils-text-editor.js"
+const textEditorSrc = "/msa/utils/msa-utils-text-editor.js"
 const makeTextEditable = importOnCall(textEditorSrc, "makeTextEditable")
 
 
@@ -99,7 +99,7 @@ importHtml(`<style>
 
 const template = `
 	<div class="admin row" style="display:none">
-		<input type="image" class="config" src="/utils/img/config">
+		<input type="image" class="config" src="/msa/utils/img/config">
 	</div>
 	<div class="chat col">
 		<div class="messages col"></div>
@@ -122,11 +122,11 @@ const msgTemplate = `
 				<div class="content" style="min-height:1em"></div>
 			</div>
 			<div class="btns row">
-				<input type="image" class="edit" src="/utils/img/edit">
-				<input type="image" class="rm" src="/utils/img/remove">
-				<input type="image" class="suggest" src="/utils/img/add">
-				<input type="image" class="save editing" src="/utils/img/save">
-				<input type="image" class="cancel editing" src="/utils/img/cancel">
+				<input type="image" class="edit" src="/msa/utils/img/edit">
+				<input type="image" class="rm" src="/msa/utils/img/remove">
+				<input type="image" class="suggest" src="/msa/utils/img/add">
+				<input type="image" class="save editing" src="/msa/utils/img/save">
+				<input type="image" class="cancel editing" src="/msa/utils/img/cancel">
 			</div>
 		</div>
 	</div>`
@@ -172,7 +172,7 @@ export class HTMLMsaChatElement extends HTMLElement {
 
 			const addBoxEl = this.querySelector(".add_box")
 			addBoxEl.onclick = async () => {
-				await import("/utils/msa-utils-boxes-menu.js")
+				await import("/msa/utils/msa-utils-boxes-menu.js")
 				const popup = await addPopup(this, document.createElement("msa-utils-boxes-menu"))
 				popup.content.onSelect = async tag => {
 					popup.remove()
@@ -394,27 +394,7 @@ registerMsaBox("msa-chat-box", {
 		return res
 	}
 })
-/*
-export function createMsaChatBox(ctx) {
-	let id
-	for (id = 1; ; ++id)
-		if (!ctx.parent.querySelector(`msa-chat[chat-id='${id}']`))
-			break
-	const res = document.createElement("msa-chat")
-	res.setAttribute("chat-id", id)
-	return res
-}
 
-export function initMsaChatBox(_this, ctx) {
-	_this.baseRoute = `${ctx.boxesRoute}/chat`
-}
-
-export function exportMsaChatBox(_this) {
-	const res = document.createElement("msa-chat")
-	res.setAttribute("chat-id", _this.getAttribute("chat-id"))
-	return res
-}
-*/
 // utils
 
 function toEls(html) {
